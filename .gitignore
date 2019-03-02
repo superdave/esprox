@@ -1,3 +1,7 @@
 build/
 sdkconfig
 sdkconfig.old
+
+.*.swp
+.*.swo
+.DS_Store
