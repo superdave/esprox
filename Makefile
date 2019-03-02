@@ -5,5 +5,6 @@
 
 PROJECT_NAME := esprox
 
-include $(IDF_PATH)/make/project.mk
+CFLAGS += -DPH_OSAL_FREERTOS 
 
+include $(IDF_PATH)/make/project.mk
