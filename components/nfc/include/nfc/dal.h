@@ -3,7 +3,6 @@
 
 #include "driver/spi_master.h"
 
-#define PH_OSAL_FREERTOS 
 #include "ph_Status.h"
 #include "phDriver.h"
 #include "phNfcLib.h"

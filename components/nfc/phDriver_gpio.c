@@ -8,6 +8,8 @@
 
 #include "driver/gpio.h"
 
+extern void CLIF_IRQHandler();
+
 typedef struct {
     gpio_pullup_t   pup;
     gpio_pulldown_t pdn;
@@ -41,10 +43,13 @@ static void gpio_isr(void *param) {
 
     xEventGroupSetBitsFromISR(isr_events, mask, &do_switch);
 
+    CLIF_IRQHandler();
+
     if(do_switch) portYIELD_FROM_ISR();
 }
 
 phStatus_t phDriver_GPIOInit() {
+    printf("GPIO init!\n");
     isr_events = xEventGroupCreate();
     if(ESP_OK != gpio_install_isr_service(0)) return PH_DRIVER_ERROR;
     return PH_DRIVER_SUCCESS;
@@ -53,16 +58,22 @@ phStatus_t phDriver_GPIOInit() {
 phStatus_t phDriver_PinConfig(uint32_t               dwPinNumber,
                               phDriver_Pin_Func_t    ePinFunc,
                               phDriver_Pin_Config_t *pPinConfig) {
+    printf("GPIO pin %d config (int 0x%08x pull %d)!\n",
+           dwPinNumber, pPinConfig->eInterruptConfig, pPinConfig->bPullSelect);
+
     // Pre-map the pull config.
     const pull_map_t const *pull_cfg = &pull_map[pPinConfig->bPullSelect];
+    const gpio_int_type_t intr = (ePinFunc == PH_DRIVER_PINFUNC_INTERRUPT) ?
+                                    intr_map[pPinConfig->eInterruptConfig] :
+                                    GPIO_INTR_DISABLE;
 
     // Fill out the config struct.
     const gpio_config_t gpio_cfg = {
-        .pin_bit_mask = (1 << dwPinNumber),
+        .pin_bit_mask = ((uint64_t)1 << dwPinNumber),
         .mode         = mode_map[ePinFunc],
         .pull_up_en   = pull_cfg->pup,
         .pull_down_en = pull_cfg->pdn,
-        .intr_type    = intr_map[pPinConfig->eInterruptConfig],
+        .intr_type    = intr,
     };
 
     // Execute the config.
@@ -94,5 +105,9 @@ void phDriver_PinWrite(uint32_t dwPinNumber,
 }
 
 void phDriver_PinClearIntStatus(uint32_t dwPinNumber) {
-    xEventGroupClearBits(isr_events, (1 << (dwPinNumber & 0x1f)));
+    if(xPortInIsrContext()) {
+        xEventGroupClearBitsFromISR(isr_events, (1 << (dwPinNumber & 0x1f)));
+    } else {
+        xEventGroupClearBits(isr_events, (1 << (dwPinNumber & 0x1f)));
+    }
 }
