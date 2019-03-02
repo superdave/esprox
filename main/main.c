@@ -67,7 +67,9 @@ void app_main(void)
     ESP_ERROR_CHECK( esp_wifi_connect() );
 
     nfc_context_t nfc_ctx;
-    ESP_ERROR_CHECK( nfc_init(&nfc_ctx) );
+    ESP_ERROR_CHECK( (PH_DRIVER_SUCCESS != nfc_init(&nfc_ctx)) );
+
+    
 
     //ESP_ERROR_CHECK( board_setup() );
 
